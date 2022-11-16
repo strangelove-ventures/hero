@@ -1,0 +1,10 @@
+syntax = "proto3";
+package hero.tokenfactory;
+
+option go_package = "github.com/strangelove-ventures/hero/x/tokenfactory/types";
+
+message Blacklisted {
+  string address = 1; 
+  
+}
+
