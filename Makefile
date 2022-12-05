@@ -71,32 +71,16 @@ BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
 
 ###############################################################################
-###                              Building                                   ###
+###                              Building / Install                         ###
 ###############################################################################
 
-all: install lint test
+all: install
 
-BUILD_TARGETS := build install
+install: go.sum
+	go install -mod=readonly $(BUILD_FLAGS) ./cmd/herod
 
-build: BUILD_ARGS=-o $(BUILDDIR)/
-
-$(BUILD_TARGETS): go.sum $(BUILDDIR)/
-	go $@ -mod=readonly $(BUILD_FLAGS) $(BUILD_ARGS) ./...
-
-$(BUILDDIR)/:
-	mkdir -p $(BUILDDIR)/
-
-
-build-linux: go.sum
-	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
-
-go-mod-cache: go.sum
-	@echo "--> Download go modules to local cache"
-	@go mod download
-
-go.sum: go.mod
-	@echo "--> Ensure dependencies have not been modified"
-	@go mod verify
+build:
+	go build $(BUILD_FLAGS) -o bin/herod ./cmd/herod
 
 
 ###############################################################################
@@ -107,5 +91,31 @@ lint:
 	@echo "--> Running linter"
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
 
+
+
+###############################################################################
+###                                IBCTEST                                  ###
+###############################################################################
+
+ibctest:
+	cd ibctest && go test -race -v -run TestHeroChain .
+
+
+###############################################################################
+###                                Build Image                              ###
+###############################################################################
+get-heighliner:
+	git clone https://github.com/strangelove-ventures/heighliner.git
+	cd heighliner && go build
+	mv ./heighliner/heighliner $(GOPATH)/bin/
+	rm -rf heighliner
+
+local-image:
+ifeq (,$(shell which heighliner))
+	echo 'heighliner' binary not found. Consider running `make get-heighliner`
+else
+	heighliner build -c hero --local -f ./chains.yaml
+endif
+
 .PHONY: all build-linux install lint \
-	go-mod-cache build \
+	go-mod-cache build ibctest get-heighliner local-image \
