@@ -265,32 +265,20 @@ func TestHeroChain(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to execute update master minter tx")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, masterMinterKeyName,
 		"tokenfactory", "configure-minter-controller", minterController.Address, minter.Address,
 	)
 	require.NoError(t, err, "failed to execute configure minter controller tx")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	_, err = heroValidator.ExecTx(ctx, minterControllerKeyName,
 		"tokenfactory", "configure-minter", minter.Address, "1000uusdc",
 	)
 	require.NoError(t, err, "failed to execute configure minter tx")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, minterKeyName,
 		"tokenfactory", "mint", user.Address, "100uusdc",
 	)
 	require.NoError(t, err, "failed to execute mint to user tx")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err := hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
@@ -302,24 +290,15 @@ func TestHeroChain(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to set blacklister")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, blacklisterKeyName,
 		"tokenfactory", "blacklist", user.Address,
 	)
 	require.NoError(t, err, "failed to blacklist user address")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, minterKeyName,
 		"tokenfactory", "mint", user.Address, "100uusdc",
 	)
 	require.NoError(t, err, "failed to execute mint to user tx")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
@@ -331,16 +310,10 @@ func TestHeroChain(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to unblacklist user address")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, minterKeyName,
 		"tokenfactory", "mint", user.Address, "100uusdc",
 	)
 	require.NoError(t, err, "failed to execute mint to user tx")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
@@ -352,24 +325,15 @@ func TestHeroChain(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to update pauser")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, pauserKeyName,
 		"tokenfactory", "pause",
 	)
 	require.NoError(t, err, "failed to pause mints")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, minterKeyName,
 		"tokenfactory", "mint", user.Address, "100uusdc",
 	)
 	require.NoError(t, err, "failed to execute mint to user tx")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
@@ -380,9 +344,6 @@ func TestHeroChain(t *testing.T) {
 		"bank", "send", user.Address, alice.Address, "100uusdc",
 	)
 	require.Error(t, err, "transaction was successful while chain was paused")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
@@ -399,16 +360,10 @@ func TestHeroChain(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to unpause mints")
 
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
-
 	_, err = heroValidator.ExecTx(ctx, userKeyName,
 		"bank", "send", user.Address, alice.Address, "100uusdc",
 	)
 	require.NoError(t, err, "failed to send tx bank from user to alice")
-
-	err = test.WaitForBlocks(ctx, 1, hero)
-	require.NoError(t, err, "failed to wait for a block on hero chain")
 
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
