@@ -22,7 +22,6 @@ import (
 
 const (
 	ownerKeyName            = "owner"
-	adminKeyName            = "admin"
 	masterMinterKeyName     = "masterminter"
 	minterKeyName           = "minter"
 	minterControllerKeyName = "mintercontroller"
@@ -158,7 +157,6 @@ func TestHeroChain(t *testing.T) {
 	masterMinter := ibctest.BuildWallet(kr, masterMinterKeyName, chainCfg)
 	minter := ibctest.BuildWallet(kr, minterKeyName, chainCfg)
 	owner := ibctest.BuildWallet(kr, ownerKeyName, chainCfg)
-	admin := ibctest.BuildWallet(kr, adminKeyName, chainCfg)
 	minterController := ibctest.BuildWallet(kr, minterControllerKeyName, chainCfg)
 	blacklister := ibctest.BuildWallet(kr, blacklisterKeyName, chainCfg)
 	pauser := ibctest.BuildWallet(kr, pauserKeyName, chainCfg)
@@ -245,7 +243,7 @@ func TestHeroChain(t *testing.T) {
 	genBz, err := heroValidator.GenesisFileContent(ctx)
 	require.NoError(t, err, "failed to read genesis file")
 
-	genBz, err = modifyGenesisHero(genBz, owner.Address, admin.Address)
+	genBz, err = modifyGenesisHero(genBz, owner.Address)
 	require.NoError(t, err, "failed to modify genesis file")
 
 	err = heroValidator.OverwriteGenesisFile(ctx, genBz)
@@ -422,16 +420,13 @@ func TestHeroChain(t *testing.T) {
 
 }
 
-func modifyGenesisHero(genbz []byte, ownerAddress, adminAddress string) ([]byte, error) {
+func modifyGenesisHero(genbz []byte, ownerAddress string) ([]byte, error) {
 	g := make(map[string]interface{})
 	if err := json.Unmarshal(genbz, &g); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
 	}
 	if err := dyno.Set(g, TokenFactoryAddress{ownerAddress}, "app_state", "tokenfactory", "owner"); err != nil {
 		return nil, fmt.Errorf("failed to set owner address in genesis json: %w", err)
-	}
-	if err := dyno.Set(g, TokenFactoryAddress{adminAddress}, "app_state", "tokenfactory", "admin"); err != nil {
-		return nil, fmt.Errorf("failed to set admin address in genesis json: %w", err)
 	}
 	if err := dyno.Set(g, TokenFactoryPaused{false}, "app_state", "tokenfactory", "paused"); err != nil {
 		return nil, fmt.Errorf("failed to set paused in genesis json: %w", err)
