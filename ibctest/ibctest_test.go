@@ -15,7 +15,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -29,6 +28,7 @@ const (
 	blacklisterKeyName      = "blacklister"
 	pauserKeyName           = "pauser"
 	userKeyName             = "user"
+	user2KeyName            = "user2"
 	aliceKeyName            = "alice"
 
 	mintingDenom = "uusdc"
@@ -163,6 +163,7 @@ func TestHeroChain(t *testing.T) {
 	blacklister := ibctest.BuildWallet(kr, blacklisterKeyName, chainCfg)
 	pauser := ibctest.BuildWallet(kr, pauserKeyName, chainCfg)
 	user := ibctest.BuildWallet(kr, userKeyName, chainCfg)
+	user2 := ibctest.BuildWallet(kr, user2KeyName, chainCfg)
 	alice := ibctest.BuildWallet(kr, aliceKeyName, chainCfg)
 
 	heroValidator := hero.Validators[0]
@@ -186,6 +187,9 @@ func TestHeroChain(t *testing.T) {
 	require.NoError(t, err, "failed to restore pauser key")
 
 	err = heroValidator.RecoverKey(ctx, userKeyName, user.Mnemonic)
+	require.NoError(t, err, "failed to restore user key")
+
+	err = heroValidator.RecoverKey(ctx, user2KeyName, user2.Mnemonic)
 	require.NoError(t, err, "failed to restore user key")
 
 	err = heroValidator.RecoverKey(ctx, aliceKeyName, alice.Mnemonic)
@@ -227,6 +231,11 @@ func TestHeroChain(t *testing.T) {
 		},
 		{
 			Address: user.Address,
+			Denom:   chainCfg.Denom,
+			Amount:  10_000,
+		},
+		{
+			Address: user2.Address,
 			Denom:   chainCfg.Denom,
 			Amount:  10_000,
 		},
@@ -304,6 +313,35 @@ func TestHeroChain(t *testing.T) {
 	require.NoError(t, err, "failed to get user balance")
 
 	require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
+
+	_, err = heroValidator.ExecTx(ctx, minterKeyName,
+		"tokenfactory", "mint", user2.Address, "100uusdc",
+	)
+	require.NoError(t, err, "failed to execute mint to user2 tx")
+
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "uusdc",
+		Amount:  50,
+	})
+	require.Error(t, err, "The tx to a blacklisted user should not have been successful")
+
+	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
+	require.NoError(t, err, "failed to get user balance")
+
+	require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
+
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "token",
+		Amount:  100,
+	})
+	require.NoError(t, err, "The tx should have been successfull as that is no the minting denom")
+
+	userBalance, err = hero.GetBalance(ctx, user.Address, "token")
+	require.NoError(t, err, "failed to get user balance")
+
+	require.Equal(t, int64(10_100), userBalance, "user balance should have incremented")
 
 	_, err = heroValidator.ExecTx(ctx, blacklisterKeyName,
 		"tokenfactory", "unblacklist", user.Address,
