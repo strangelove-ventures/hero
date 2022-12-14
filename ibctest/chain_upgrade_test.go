@@ -12,7 +12,6 @@ import (
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/icza/dyno"
-	integration "github.com/strangelove-ventures/hero/ibctest"
 	tokenfactorytypes "github.com/strangelove-ventures/hero/x/tokenfactory/types"
 	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
@@ -23,7 +22,7 @@ import (
 )
 
 const (
-	upgradeVersion = "dan-remove-tkn-admin"
+	upgradeVersion = "dan-upgrade"
 
 	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
 	blocksAfterUpgrade = uint64(10)
@@ -123,8 +122,6 @@ func TestHeroUpgrade(t *testing.T) {
 
 	client, network := ibctest.DockerSetup(t)
 
-	repo, version := integration.GetDockerImageInfo()
-
 	chainCfg := ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           "hero",
@@ -138,8 +135,8 @@ func TestHeroUpgrade(t *testing.T) {
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
 			{
-				Repository: repo,
-				Version:    version,
+				Repository: "ghcr.io/strangelove-ventures/hero",
+				Version:    "genesis",
 				UidGid:     "1025:1025",
 			},
 		},
@@ -214,6 +211,11 @@ func TestHeroUpgrade(t *testing.T) {
 	require.NoError(t, err, "failed to initialize hero validator config")
 
 	genesisWallets := []ibc.WalletAmount{
+		{
+			Address: admin.Address,
+			Denom:   chainCfg.Denom,
+			Amount:  10_000,
+		},
 		{
 			Address: owner.Address,
 			Denom:   chainCfg.Denom,
@@ -334,29 +336,29 @@ func TestHeroUpgrade(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to execute mint to user2 tx")
 
-	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
-		Address: user.Address,
-		Denom:   "uusdc",
-		Amount:  50,
-	})
-	require.Error(t, err, "The tx to a blacklisted user should not have been successful")
+	// err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+	// 	Address: user.Address,
+	// 	Denom:   "uusdc",
+	// 	Amount:  50,
+	// })
+	// require.Error(t, err, "The tx to a blacklisted user should not have been successful")
 
-	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
-	require.NoError(t, err, "failed to get user balance")
+	// userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
+	// require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
+	// require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
 
-	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
-		Address: user.Address,
-		Denom:   "token",
-		Amount:  100,
-	})
-	require.NoError(t, err, "The tx should have been successfull as that is no the minting denom")
+	// err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+	// 	Address: user.Address,
+	// 	Denom:   "token",
+	// 	Amount:  100,
+	// })
+	// require.NoError(t, err, "The tx should have been successfull as that is no the minting denom")
 
-	userBalance, err = hero.GetBalance(ctx, user.Address, "token")
-	require.NoError(t, err, "failed to get user balance")
+	// userBalance, err = hero.GetBalance(ctx, user.Address, "token")
+	// require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(10_100), userBalance, "user balance should have incremented")
+	// require.Equal(t, int64(10_100), userBalance, "user balance should have incremented")
 
 	_, err = heroValidator.ExecTx(ctx, blacklisterKeyName,
 		"tokenfactory", "unblacklist", user.Address,
@@ -432,7 +434,7 @@ func TestHeroUpgrade(t *testing.T) {
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
 	haltHeight := height + haltHeightDelta
 
-	_, err = heroValidator.ExecTx(ctx, adminKeyName, "adminmodule", "submit-proposal", "software-upgrade", "herculese", "--upgrade-height", strconv.Itoa(int(haltHeight)), "--upgrade-info", "upgrade info")
+	_, err = heroValidator.ExecTx(ctx, adminKeyName, "adminmodule", "submit-proposal", "software-upgrade", "herculese", "--title", "Herculese upgrade", "--description", "description here", "--upgrade-height", strconv.Itoa(int(haltHeight)), "--upgrade-info", "upgrade info")
 	require.NoError(t, err, "error submiting proposal")
 
 	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
@@ -475,19 +477,22 @@ func TestHeroUpgrade(t *testing.T) {
 	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
 
 	err = hero.StopAllNodes(ctx)
-	state, err := hero.ExportState(ctx, int64(height))
 	require.NoError(t, err, "error stopping node(s)")
+
+	state, err := hero.ExportState(ctx, int64(height))
+	require.NoError(t, err, "failed to export state")
+	t.Log("state: ", state)
 
 	g := make(map[string]interface{})
 	err = json.Unmarshal([]byte(state), &g)
 	require.NoError(t, err, "failed to unmarshal state")
 
 	tokenFactoryAdmin, err := dyno.Get(g, "app_state", "tokenfactory", "admin")
+	require.NoError(t, err)
 	tfa, ok := tokenFactoryAdmin.(TokenFactoryAddress)
 	t.Log("tokenFactoryAdmin: ", tokenFactoryAdmin)
 	t.Log("tfa: ", tfa)
 	t.Log("ok: ", ok)
-
 }
 
 func modifyGenesisHero(genbz []byte, ownerAddress, adminAddress string) ([]byte, error) {
