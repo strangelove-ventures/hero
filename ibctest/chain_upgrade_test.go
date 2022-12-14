@@ -2,19 +2,117 @@ package ibctest_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/icza/dyno"
 	integration "github.com/strangelove-ventures/hero/ibctest"
+	tokenfactorytypes "github.com/strangelove-ventures/hero/x/tokenfactory/types"
 	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
-func TestHeroChain(t *testing.T) {
+const (
+	upgradeVersion = "dan-remove-tkn-admin"
+
+	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
+	blocksAfterUpgrade = uint64(10)
+
+	adminKeyName            = "admin"
+	ownerKeyName            = "owner"
+	masterMinterKeyName     = "masterminter"
+	minterKeyName           = "minter"
+	minterControllerKeyName = "mintercontroller"
+	blacklisterKeyName      = "blacklister"
+	pauserKeyName           = "pauser"
+	userKeyName             = "user"
+	user2KeyName            = "user2"
+	aliceKeyName            = "alice"
+
+	mintingDenom = "uusdc"
+)
+
+var (
+	denomMetadata = []DenomMetadata{
+		{
+			Display: "usdc",
+			Base:    "uusdc",
+			Name:    "USDC",
+			Symbol:  "USDC",
+			DenomUnits: []DenomUnit{
+				{
+					Denom: "uusdc",
+					Aliases: []string{
+						"microusdc",
+					},
+					Exponent: "0",
+				},
+				{
+					Denom: "musdc",
+					Aliases: []string{
+						"milliusdc",
+					},
+					Exponent: "3",
+				},
+				{
+					Denom:    "usdc",
+					Exponent: "6",
+				},
+			},
+		},
+	}
+)
+
+type DenomMetadata struct {
+	Display    string      `json:"display"`
+	Base       string      `json:"base"`
+	Name       string      `json:"name"`
+	Symbol     string      `json:"symbol"`
+	DenomUnits []DenomUnit `json:"denom_units"`
+}
+
+type DenomUnit struct {
+	Denom    string   `json:"denom"`
+	Aliases  []string `json:"aliases"`
+	Exponent string   `json:"exponent"`
+}
+
+type TokenFactoryAddress struct {
+	Address string `json:"address"`
+}
+
+type AdminModuleState struct {
+	Admins []string `json:"admins"`
+}
+
+type TokenFactoryPaused struct {
+	Paused bool `json:"paused"`
+}
+
+type TokenFactoryDenom struct {
+	Denom string `json:"denom"`
+}
+
+func HeroEncoding() *simappparams.EncodingConfig {
+	cfg := cosmos.DefaultEncoding()
+
+	// register custom types
+	tokenfactorytypes.RegisterInterfaces(cfg.InterfaceRegistry)
+
+	return &cfg
+}
+
+func TestHeroUpgrade(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -83,7 +181,7 @@ func TestHeroChain(t *testing.T) {
 	heroValidator := hero.Validators[0]
 
 	err = heroValidator.RecoverKey(ctx, adminKeyName, admin.Mnemonic)
-	require.NoError(t, err, "failed to restore admin key")
+	require.NoError(t, err, "failed to restore masterminter key")
 
 	err = heroValidator.RecoverKey(ctx, ownerKeyName, owner.Mnemonic)
 	require.NoError(t, err, "failed to restore owner key")
@@ -116,11 +214,6 @@ func TestHeroChain(t *testing.T) {
 	require.NoError(t, err, "failed to initialize hero validator config")
 
 	genesisWallets := []ibc.WalletAmount{
-		{
-			Address: admin.Address,
-			Denom:   chainCfg.Denom,
-			Amount:  10_000,
-		},
 		{
 			Address: owner.Address,
 			Denom:   chainCfg.Denom,
@@ -190,8 +283,6 @@ func TestHeroChain(t *testing.T) {
 
 	err = heroValidator.StartContainer(ctx)
 	require.NoError(t, err, "failed to create hero validator container")
-
-	// --
 
 	_, err = heroValidator.ExecTx(ctx, ownerKeyName,
 		"tokenfactory", "update-master-minter", masterMinter.Address,
@@ -336,5 +427,101 @@ func TestHeroChain(t *testing.T) {
 	require.NoError(t, err, "failed to get alice balance")
 
 	require.Equal(t, int64(100), aliceBalance, "alice balance should not have increased while chain is paused")
+
+	height, err := hero.Height(ctx)
+	require.NoError(t, err, "error fetching height before submit upgrade proposal")
+	haltHeight := height + haltHeightDelta
+
+	_, err = heroValidator.ExecTx(ctx, adminKeyName, "adminmodule", "submit-proposal", "software-upgrade", "herculese", "--upgrade-height", strconv.Itoa(int(haltHeight)), "--upgrade-info", "upgrade info")
+	require.NoError(t, err, "error submiting proposal")
+
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
+	defer timeoutCtxCancel()
+
+	height, err = hero.Height(ctx)
+	require.NoError(t, err, "error fetching height before upgrade")
+
+	// this should timeout due to chain halt at upgrade height.
+	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, hero)
+
+	height, err = hero.Height(ctx)
+	require.NoError(t, err, "error fetching height after hero should have halted")
+
+	// make sure that hero is halted
+	require.Equal(t, haltHeight, height, "height is not equal to halt height")
+
+	// bring down nodes to prepare for upgrade
+	err = hero.StopAllNodes(ctx)
+	require.NoError(t, err, "error stopping node(s)")
+
+	// upgrade version on all nodes
+	hero.UpgradeVersion(ctx, client, upgradeVersion)
+
+	// start all nodes back up.
+	// validators reach consensus on first block after upgrade height
+	// and hero block production resumes.
+	err = hero.StartAllNodes(ctx)
+	require.NoError(t, err, "error starting upgraded node(s)")
+
+	timeoutCtx, timeoutCtxCancel = context.WithTimeout(ctx, time.Second*45)
+	defer timeoutCtxCancel()
+
+	err = test.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), hero)
+	require.NoError(t, err, "hero did not produce blocks after upgrade")
+
+	height, err = hero.Height(ctx)
+	require.NoError(t, err, "error fetching height after upgrade")
+
+	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
+
+	err = hero.StopAllNodes(ctx)
+	state, err := hero.ExportState(ctx, int64(height))
+	require.NoError(t, err, "error stopping node(s)")
+
+	g := make(map[string]interface{})
+	err = json.Unmarshal([]byte(state), &g)
+	require.NoError(t, err, "failed to unmarshal state")
+
+	tokenFactoryAdmin, err := dyno.Get(g, "app_state", "tokenfactory", "admin")
+	tfa, ok := tokenFactoryAdmin.(TokenFactoryAddress)
+	t.Log("tokenFactoryAdmin: ", tokenFactoryAdmin)
+	t.Log("tfa: ", tfa)
+	t.Log("ok: ", ok)
+
+}
+
+func modifyGenesisHero(genbz []byte, ownerAddress, adminAddress string) ([]byte, error) {
+	g := make(map[string]interface{})
+	if err := json.Unmarshal(genbz, &g); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
+	}
+	admins := []string{adminAddress}
+	if err := dyno.Set(g, admins, "app_state", "adminmodule", "admins"); err != nil {
+		return nil, fmt.Errorf("failed to set admin module address in genesis json: %w", err)
+	}
+
+	if err := dyno.Set(g, TokenFactoryAddress{adminAddress}, "app_state", "tokenfactory", "admin"); err != nil {
+		return nil, fmt.Errorf("failed to set admin address in genesis json: %w", err)
+	}
+
+	if err := dyno.Set(g, TokenFactoryAddress{ownerAddress}, "app_state", "tokenfactory", "owner"); err != nil {
+		return nil, fmt.Errorf("failed to set owner address in genesis json: %w", err)
+	}
+	if err := dyno.Set(g, TokenFactoryPaused{false}, "app_state", "tokenfactory", "paused"); err != nil {
+		return nil, fmt.Errorf("failed to set paused in genesis json: %w", err)
+	}
+	if err := dyno.Set(g, TokenFactoryDenom{mintingDenom}, "app_state", "tokenfactory", "mintingDenom"); err != nil {
+		return nil, fmt.Errorf("failed to set minting denom in genesis json: %w", err)
+	}
+
+	if err := dyno.Set(g, denomMetadata, "app_state", "bank", "denom_metadata"); err != nil {
+		return nil, fmt.Errorf("failed to set denom metadata in genesis json: %w", err)
+	}
+
+	out, err := json.Marshal(g)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+	}
+	return out, nil
 
 }
