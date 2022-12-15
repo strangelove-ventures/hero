@@ -309,6 +309,7 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err := hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
+	// user address= 100
 	require.Equal(t, int64(100), userBalance, "failed to mint uusdc to user")
 
 	_, err = heroValidator.ExecTx(ctx, ownerKeyName,
@@ -329,6 +330,7 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
+	// user address= 100
 	require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
 
 	_, err = heroValidator.ExecTx(ctx, minterKeyName,
@@ -336,29 +338,31 @@ func TestHeroUpgrade(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to execute mint to user2 tx")
 
-	// err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
-	// 	Address: user.Address,
-	// 	Denom:   "uusdc",
-	// 	Amount:  50,
-	// })
-	// require.Error(t, err, "The tx to a blacklisted user should not have been successful")
+	// BEFORE THE CHAIN UPGRADE THIS TX SHOULD GO THROUGH (Sending funds from non-blacklisted user to a blacklisted user)
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "uusdc",
+		Amount:  50,
+	})
+	require.NoError(t, err, "Because this is before the chain upgade, The tx to a blacklisted user SHOULD have been successful")
 
-	// userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
-	// require.NoError(t, err, "failed to get user balance")
+	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
+	require.NoError(t, err, "failed to get user balance")
 
-	// require.Equal(t, int64(100), userBalance, "user balance should not have incremented while blacklisted")
+	// user address= 150
+	require.Equal(t, int64(150), userBalance, "Because this is before the chain upgade, user balance should have incremented while blacklisted")
 
-	// err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
-	// 	Address: user.Address,
-	// 	Denom:   "token",
-	// 	Amount:  100,
-	// })
-	// require.NoError(t, err, "The tx should have been successfull as that is no the minting denom")
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "token",
+		Amount:  100,
+	})
+	require.NoError(t, err, "The tx should have been successfull as that is not the minting denom")
 
-	// userBalance, err = hero.GetBalance(ctx, user.Address, "token")
-	// require.NoError(t, err, "failed to get user balance")
+	userBalance, err = hero.GetBalance(ctx, user.Address, "token")
+	require.NoError(t, err, "failed to get user balance")
 
-	// require.Equal(t, int64(10_100), userBalance, "user balance should have incremented")
+	require.Equal(t, int64(10_100), userBalance, "user balance should have incremented")
 
 	_, err = heroValidator.ExecTx(ctx, blacklisterKeyName,
 		"tokenfactory", "unblacklist", user.Address,
@@ -373,7 +377,8 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(200), userBalance, "user balance should have increased now that they are no longer blacklisted")
+	// user address= 250
+	require.Equal(t, int64(250), userBalance, "user balance should have increased now that they are no longer blacklisted")
 
 	_, err = heroValidator.ExecTx(ctx, ownerKeyName,
 		"tokenfactory", "update-pauser", pauser.Address,
@@ -393,7 +398,8 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(200), userBalance, "user balance should not have increased while chain is paused")
+	// user address= 250
+	require.Equal(t, int64(250), userBalance, "user balance should not have increased while chain is paused")
 
 	_, err = heroValidator.ExecTx(ctx, userKeyName,
 		"bank", "send", user.Address, alice.Address, "100uusdc",
@@ -403,7 +409,8 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(200), userBalance, "user balance should not have changed while chain is paused")
+	// user address= 250
+	require.Equal(t, int64(250), userBalance, "user balance should not have changed while chain is paused")
 
 	aliceBalance, err := hero.GetBalance(ctx, alice.Address, "uusdc")
 	require.NoError(t, err, "failed to get alice balance")
@@ -423,12 +430,13 @@ func TestHeroUpgrade(t *testing.T) {
 	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
 	require.NoError(t, err, "failed to get user balance")
 
-	require.Equal(t, int64(100), userBalance, "user balance should not have changed while chain is paused")
+	// user address= 150
+	require.Equal(t, int64(150), userBalance, "user balance should have changed because chain is unpaused")
 
 	aliceBalance, err = hero.GetBalance(ctx, alice.Address, "uusdc")
 	require.NoError(t, err, "failed to get alice balance")
 
-	require.Equal(t, int64(100), aliceBalance, "alice balance should not have increased while chain is paused")
+	require.Equal(t, int64(100), aliceBalance, "alice balance should have increased because chain is not paused")
 
 	height, err := hero.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
@@ -479,7 +487,7 @@ func TestHeroUpgrade(t *testing.T) {
 	err = hero.StopAllNodes(ctx)
 	require.NoError(t, err, "error stopping node(s)")
 
-	state, err := hero.ExportState(ctx, int64(height))
+	state, err := heroValidator.ExportState(ctx, int64(height))
 	require.NoError(t, err, "failed to export state")
 	t.Log("state: ", state)
 
@@ -493,6 +501,36 @@ func TestHeroUpgrade(t *testing.T) {
 	t.Log("tokenFactoryAdmin: ", tokenFactoryAdmin)
 	t.Log("tfa: ", tfa)
 	t.Log("ok: ", ok)
+
+	// Validate new functionality from chain update
+	_, err = heroValidator.ExecTx(ctx, blacklisterKeyName,
+		"tokenfactory", "blacklist", user.Address,
+	)
+	require.NoError(t, err, "failed to blacklist user address")
+
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "uusdc",
+		Amount:  50,
+	})
+	require.Error(t, err, "Because this is after the chain upgade, The tx to a blacklisted user should not have been successful")
+
+	userBalance, err = hero.GetBalance(ctx, user.Address, "uusdc")
+	require.NoError(t, err, "failed to get user balance")
+
+	require.Equal(t, int64(150), userBalance, "Because this is after the chain upgade, user balance should not have incremented while blacklisted")
+
+	err = heroValidator.SendFunds(ctx, user2KeyName, ibc.WalletAmount{
+		Address: user.Address,
+		Denom:   "token",
+		Amount:  100,
+	})
+	require.NoError(t, err, "The tx should have been successfull as that is no the minting denom")
+
+	userBalance, err = hero.GetBalance(ctx, user.Address, "token")
+	require.NoError(t, err, "failed to get user balance")
+
+	require.Equal(t, int64(10_200), userBalance, "user balance should have incremented")
 }
 
 func modifyGenesisHero(genbz []byte, ownerAddress, adminAddress string) ([]byte, error) {
