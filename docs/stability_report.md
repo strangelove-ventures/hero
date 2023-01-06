@@ -91,6 +91,9 @@ Below are the Tokenfactory commands manually ran during the Game of Chains Testn
 For the below commands, "user1" and "user2" are normal unprivileged accounts. The remaining accounts should be self explanatory from their name via the [Access Control Table](../readme.md#access-control). For situations where the wallet address was needed instead of the key name, simply hover over the address to see the tool tip describing what privileged account the address is tied to.
 
 
+The linked images are there to show what the output of the command looks like in either a blockchain explorer or the command line. 
+
+
 <!-- cosmos1q4adyc9a75u6eclu6czqtr2vfyqf6v4svwwnyr -->
 [owner]: ## "Owner"
 <!-- cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg --> 
