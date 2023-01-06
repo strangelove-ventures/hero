@@ -75,9 +75,9 @@ In addition to the Game of Chains tests, there is a CI/CD pipeline using [ibctes
 
 During the course of the testnet, we discovered and fixed three critical bugs:
 
-* [PR #4](https://github.com/strangelove-ventures/hero/pull/4) It was impossible to burn assets minted by tokenfactory 
-* [PR #4](https://github.com/strangelove-ventures/hero/pull/4) A non-blacklisted user was able to send tokenfactory assets to a blacklisted user
-* [PR #1](https://github.com/strangelove-ventures/hero/pull/1) A blacklisted user was unable to send/receive assets not minted by the tokenfactory
+* [[PR #4]](https://github.com/strangelove-ventures/hero/pull/4) It was impossible to burn assets minted by tokenfactory 
+* [[PR #4]](https://github.com/strangelove-ventures/hero/pull/4) A non-blacklisted user was able to send tokenfactory assets to a blacklisted user
+* [[PR #1]](https://github.com/strangelove-ventures/hero/pull/1) A blacklisted user was unable to send/receive assets not minted by the tokenfactory
 
 
 Due to the Game of Chains halt, we were unable to incorporate these changes during the testnet. However, rigorous test cases were added to the [ibctest CI pipeline](https://github.com/strangelove-ventures/hero/blob/main/ibctest/ibctest_test.go) to validate the fixes and prevent future regressions. Since the complexity of these bugs were minimal, we found these ibctest cases sufficient in ensuring confidence.
@@ -88,7 +88,7 @@ Due to the Game of Chains halt, we were unable to incorporate these changes duri
 Below are the Tokenfactory commands manually ran during the Game of Chains Testnet. 
 
 
-For the below commands, "user1" and "user2" are normal unprivileged accounts. The remaining accounts should be self explanatory from their name via the [Access Control Table](../readme.md#access-control). For situations where wallet address needed instead of the key name, simply hover over the address to see the tool tip describing what privileged account the address is tied to.
+For the below commands, "user1" and "user2" are normal unprivileged accounts. The remaining accounts should be self explanatory from their name via the [Access Control Table](../readme.md#access-control). For situations where the wallet address was needed instead of the key name, simply hover over the address to see the tool tip describing what privileged account the address is tied to.
 
 
 <!-- cosmos1q4adyc9a75u6eclu6czqtr2vfyqf6v4svwwnyr -->
