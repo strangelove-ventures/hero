@@ -38,7 +38,7 @@ herod init $MONIKER
 | **Update Master Minter**       |           |     x     |            |                   |                       |            |                 |                 x                |
 | **Update Owner**               |           |     x     |            |                   |                       |            |                 |                 x                |
 | **Update Pauser**              |           |     x     |            |                   |                       |            |                 |                 x                |
-| **Transer Tokens**             |     x     |     x     |      x     |         x         |           x           |      x     |        x        |                                  |
+| **Transfer Tokens**             |     x     |     x     |      x     |         x         |           x           |      x     |        x        |                                  |
  
  
 ## Launch with genesis file or run as standalone chain
