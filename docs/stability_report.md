@@ -3,6 +3,15 @@
 
 ## Testnet commands
 
+<!-- cosmos1q4adyc9a75u6eclu6czqtr2vfyqf6v4svwwnyr --> [owner]: ## "Owner"
+<!-- cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg --> [master_minter]: ## "Master Minter"
+<!-- cosmos1erqarmzn2ae5vd4j6sk77hccs0yfs854jee8wd --> [mint_controller]: ## "Mint Controller"
+<!-- cosmos1uydlnqjz5mjfgafs9gxm5lhww4hdffldmu2j6y --> [minter]: ## "Minter"
+<!-- cosmos1w9v9nfa2lvfhx3u6g8l67g64deu9d4wvjav7vk --> [blacklister]: ## "Blacklister"
+<!-- cosmos1earswrsr7xhl8mgkglvfvcxqxqsflpu9cvun93 --> [pauser]: ## "Pauser"
+<!-- cosmos1qtw23j6y9758juk6mnm937uands7vyxsxkhptu --> [user1]: ## "User1"
+<!-- cosmos1zaamktfya6ps3ektdpt7xgka5nu9hx2w8ruthx --> [user2]: ## "User2"
+
 | Title | Summary | Command | Images |
 |:---:|:---:|:---:|:---:|
 | Update Master Minter from Non-Privleged Account | This tx correctly failed due to the tx being signed from an account without the “owner”  privilege. | herod tx tokenfactory update-master-minter [cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg][master_minter] --from user1 --fees 500uhero | x |
@@ -25,11 +34,4 @@
 | Un-Pause | Successfully un-paused chain using the privileged “pauser” account | herod tx tokenfactory unpause --fees 500uhero --from pauser | x |
 
 
-[owner]: ## "Owner" <!-- cosmos1q4adyc9a75u6eclu6czqtr2vfyqf6v4svwwnyr -->
-<!-- cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg --> [master_minter]: ## "Master Minter"
-<!-- cosmos1erqarmzn2ae5vd4j6sk77hccs0yfs854jee8wd --> [mint_controller]: ## "Mint Controller"
-<!-- cosmos1uydlnqjz5mjfgafs9gxm5lhww4hdffldmu2j6y --> [minter]: ## "Minter"
-<!-- cosmos1w9v9nfa2lvfhx3u6g8l67g64deu9d4wvjav7vk --> [blacklister]: ## "Blacklister"
-<!-- cosmos1earswrsr7xhl8mgkglvfvcxqxqsflpu9cvun93 --> [pauser]: ## "Pauser"
-<!-- cosmos1qtw23j6y9758juk6mnm937uands7vyxsxkhptu --> [user1]: ## "User1"
-<!-- cosmos1zaamktfya6ps3ektdpt7xgka5nu9hx2w8ruthx --> [user2]: ## "User2"
+
