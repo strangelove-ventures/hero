@@ -1,8 +1,8 @@
 # Stability Report
 
 Written by: Strangelove Ventures
-Published: January 6, 2023
 
+Published: January 6, 2023
 
 
 ## Abstract 
@@ -11,11 +11,9 @@ Hero chain is an application specific Cosmos chain developed and tested by the t
 The key properties related to compliance features, integration with IBC, governance were all tested in real world conditions. 
 
 
-
 ## About this Report
 
-This stability report covers testing undertaken on the Hero chain by the Strangelove Team. The majority of the testing took place during the public incentivized testnet – Game of Chains –[[Leaderboard](https://interchainsecurity.dev/game-of-chains-2022), [Announcement Blog Post](https://blog.cosmos.network/announcing-game-of-chains-open-for-registration-d1818662de8e)] which started on November 7, 2022 and finished on December 9, 2022. While this report covers some critical aspects of [Interchain Security](https://github.com/cosmos/interchain-security) (ICS) and the [Admin Module](https://github.com/Ethernal-Tech/admin-module/), this report will focus on the [Tokenfactory Module](https://github.com/strangelove-ventures/hero/tree/main/x/tokenfactory). This module provides the key functionality of Hero allowing privileged accounts to mint assets and blacklist users. The module was also the one piece that was directly developed by Strangelove. 
-
+This stability report covers testing undertaken on the Hero chain by the Strangelove Team. The majority of the testing took place during the public incentivized testnet – Game of Chains [[Leaderboard](https://interchainsecurity.dev/game-of-chains-2022), [Announcement Blog Post](https://blog.cosmos.network/announcing-game-of-chains-open-for-registration-d1818662de8e)]. The testnet started on November 7, 2022 and finished on December 9, 2022. While this report covers some critical aspects of [Interchain Security](https://github.com/cosmos/interchain-security) (ICS) and the [Admin Module](https://github.com/Ethernal-Tech/admin-module/), this report will focus on the [Tokenfactory Module](https://github.com/strangelove-ventures/hero/tree/main/x/tokenfactory). This module provides the key functionality of Hero allowing privileged accounts to mint assets and blacklist users. The module was also the one piece that was directly developed by Strangelove. 
 
 
 #### Approaches for the stability analysis
@@ -25,41 +23,41 @@ This stability report covers testing undertaken on the Hero chain by the Strange
 * Audit of Tokenfactory module/middleware, Admin Module, Packet Forward Middleware (to begin Jan 17, 2023)
 
 
-
 ## Induction into Game Of Chains
 
-On November 21, 2022, using [Interchain Security](https://github.com/cosmos/interchain-security), Hero was successfully added as a consumer chain to the testnet under the provider chain. In a real world-context, the provider chain is the high-market cap proof of stake chain which will be able to offer high security guarantees to Cosmos blockchains in return for a fee paid to validators. In this testnet, the provider chain was a [forked version of Gaia](https://github.com/cosmos/gaia/tree/goc-dec-7), Gaia being the chain binary that runs the Cosmos hub. This fork was necessary because it included the [pre-release of Interchain Security](https://github.com/cosmos/interchain-security/releases/tag/v0.1). 
+On November 21, 2022, using [Interchain Security](https://github.com/cosmos/interchain-security), Hero was successfully added as a consumer chain to the testnet. In a real world-context, the provider chain is the high-market cap proof of stake chain which will be able to offer high security guarantees to Cosmos blockchains in return for a fee paid to validators. In this testnet, the provider chain was a [forked version of Gaia](https://github.com/cosmos/gaia/tree/goc-dec-7), Gaia being the chain binary that runs the Cosmos Hub. This fork was necessary because it included the [pre-release of Interchain Security](https://github.com/cosmos/interchain-security/releases/tag/v0.1). 
 
-After being on-boarded as a consumer chain, everything acted as expected:
+After being on-boarded as a consumer chain, Hero acted as expected:
 
 * Hero properly adopted the provider chains validator set
-* IBC transactions and IBC functionality continued to work as expected
+* IBC transactions and IBC functionality worked as expected
 * Chain output logs were stable
-
 
 
 ## Provider Chain Halt and Eventual Hero Halt
 
 On December 8, 2022, the provider chain halted while the community tested out a “slash throttle” feature. At the time of the halt, research was being tracked [here](https://github.com/hyphacoop/ics-testnets/tree/goc-dec-halt-incident/game-of-chains-2022/incidents). The bug has since been found and [fixed](https://github.com/cosmos/interchain-security/pull/605). 
 
-In the current version of ICS, if a provider chain halts, consumer chains continue to produce blocks and accept IBC transactions until the trusting period of the [light-client](https://github.com/cosmos/ibc/tree/main/spec/core/ics-002-client-semantics) expires. With a client trusting period of 1 week, Hero continued to run smoothly without the provider chain. 
+In the current version of ICS, if a provider chain halts, consumer chains continue to produce blocks and accept IBC transactions until the trusting period of the [light-client](https://github.com/cosmos/ibc/tree/main/spec/core/ics-002-client-semantics) expires. 
+
+With a client trusting period of 1 week, Hero continued to run smoothly without the provider chain. 
 
 On December 14, 2022, one week after the halt of the provider chain, the light-client between Hero and the provider expired, causing Hero to also halt.
 
-This is extremely unlikely in a real world scenario as Hero is intended to launch as a consumer chain of the Cosmos Hub. To our knowledge, the Cosmos Hub has not had any unplanned downtime since launch. Other precautions can also be taken, such as specifying a longer trusting period when creating the client between consumer and provider.  
+This is extremely unlikely in a real world scenario as Hero is intended to launch as a consumer chain of the Cosmos Hub. To our knowledge, the Cosmos Hub has not had any unplanned downtime since launch. Other precautions can also be taken, such as specifying a longer client trusting period between consumer and provider.  
 
-It is possible to recover a consumer chain in this situation, but it will require code changes and cooperation from validators.
+It is possible to recover a consumer chain in this situation, but requires code changes and cooperation from validators.
 
 
 
 ## Tokenfactory Module
 
 
-The [Tokenfactory Module](https://github.com/strangelove-ventures/hero/tree/main/x/tokenfactory) in the Hero chain binary allows permissioned assets to be minted and controlled by privileged administrative accounts. Privileged accounts can also place a pause on all transactions to and from the chain.
+The [Tokenfactory Module](https://github.com/strangelove-ventures/hero/tree/main/x/tokenfactory) in the Hero chain binary allows generic assets to be minted and controlled by privileged accounts. Privileged accounts can also place a pause on all transactions to and from the chain.
 
-A list of accounts and their privileges can be seen [here](TODO: INSERT LINK).
+A list of all possible privledges tied to the Tokenfactory can be seen [here](../readme.md#access-control).
 
-Throughout the duration of the Game of Chains testnet, Strangelove manually tested many Tokenfactory commands. At a high level, we tested:
+Throughout the duration of the Game of Chains Testnet, Strangelove manually tested many Tokenfactory commands. At a high level, we tested:
 
 * Delegation and creation of all privileged accounts (Master Minter, Minter, Blacklist, etc,)
 * Minting of assets
@@ -69,7 +67,7 @@ Throughout the duration of the Game of Chains testnet, Strangelove manually test
 
 A detailed list of all commands and their outcomes are available in this [table](#testnet-commands)
 
-In addition to the Game of Chains tests, there is a CI/CD pipeline using [ibctest](https://github.com/strangelove-ventures/ibctest) built into the github repo to continuously validate Tokenfactory functionality as features are added.
+In addition to the Game of Chains tests, there is a CI/CD pipeline using [ibctest](https://github.com/strangelove-ventures/ibctest) built into the github repo to continuously validate Tokenfactory functionality as features are added and changed.
 
 
 ## Tokenfactory Module Discoveries
@@ -77,15 +75,21 @@ In addition to the Game of Chains tests, there is a CI/CD pipeline using [ibctes
 
 During the course of the testnet, we discovered and fixed three critical bugs:
 
-* It was impossible to burn assets minted by tokenfactory [PR #4](https://github.com/strangelove-ventures/hero/pull/4)
-* A non-blacklisted user was able to send tokenfactory assets to a blacklisted user [PR #4](https://github.com/strangelove-ventures/hero/pull/4)
-* A blacklisted user was unable to send/receive assets not minted by the tokenfactory [PR #1](https://github.com/strangelove-ventures/hero/pull/1)
+* [PR #4](https://github.com/strangelove-ventures/hero/pull/4) It was impossible to burn assets minted by tokenfactory 
+* [PR #4](https://github.com/strangelove-ventures/hero/pull/4) A non-blacklisted user was able to send tokenfactory assets to a blacklisted user
+* [PR #1](https://github.com/strangelove-ventures/hero/pull/1) A blacklisted user was unable to send/receive assets not minted by the tokenfactory
 
 
-Due to the Game of Chains halt, we were unable to incorporate these changes during the testnet. Rigorous test cases were added to the [ibctest CI pipeline](https://github.com/strangelove-ventures/hero/blob/main/ibctest/ibctest_test.go) to validate the fixes and prevent future regressions. Since the complexity of these bugs were minimal, we found the ibctest cases sufficient in ensuring confidence.
+Due to the Game of Chains halt, we were unable to incorporate these changes during the testnet. However, rigorous test cases were added to the [ibctest CI pipeline](https://github.com/strangelove-ventures/hero/blob/main/ibctest/ibctest_test.go) to validate the fixes and prevent future regressions. Since the complexity of these bugs were minimal, we found these ibctest cases sufficient in ensuring confidence.
 
 
 ## Testnet commands
+
+Below are the Tokenfactory commands manually ran during the Game of Chains Testnet. 
+
+
+For the below commands, "user1" and "user2" are normal unprivileged accounts. The remaining accounts should be self explanatory from their name via the [Access Control Table](../readme.md#access-control). For situations where wallet address needed instead of the key name, simply hover over the address to see the tool tip describing what privileged account the address is tied to.
+
 
 <!-- cosmos1q4adyc9a75u6eclu6czqtr2vfyqf6v4svwwnyr -->
 [owner]: ## "Owner"
@@ -104,7 +108,7 @@ Due to the Game of Chains halt, we were unable to incorporate these changes duri
 <!-- cosmos1zaamktfya6ps3ektdpt7xgka5nu9hx2w8ruthx --> 
 [user2]: ## "User2"
 
-| Title | Summary | Command | Images |
+| Description | Summary | Command | Images |
 |:---:|:---:|:---:|:---:|
 | Update Master Minter from Non-Privleged Account | This tx correctly failed due to the tx being signed from an account without the “owner”  privilege. | herod tx tokenfactory update-master-minter [cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg][master_minter] --from user1 --fees 500uhero | x |
 | Update Master Minter | Successfully updated Master Minter account using privileged “owner” account | herod tx tokenfactory update-master-minter [cosmos1fmtkwd7awdyavzk78yh75wt0tl7vcme89f42xg][master_minter] --from owner --fees 500uhero | x |
@@ -150,4 +154,4 @@ The Gov module in this upgraded version of the SDK will have this functionality 
 
 Besides the three bugs discovered in the Tokenfactory module, the Hero chain worked and functioned as intended. The halt of Game of Chains hindered some testing capacity but ibctest proved a reliable replacement.
 
-While the chain functionality itself is easy to validate with the ibctest suite, the intricacies of Interchain Security along with more rigorous widespread testing of Tokenfactory behavior can be further explored during the [Cosmos SDK Rho](https://hub.cosmos.network/main/roadmap/cosmos-hub-roadmap-2.0.html#v8-rho-upgrade-expected-q1-2023) Testnet and via a third party audit conducted by Oak Security. 
+While the chain functionality itself is easy to validate with the ibctest suite, the intricacies of Interchain Security along with more rigorous widespread testing of Tokenfactory behavior can be further explored during the [Cosmos SDK Rho](https://hub.cosmos.network/main/roadmap/cosmos-hub-roadmap-2.0.html#v8-rho-upgrade-expected-q1-2023) Testnet and via a third party audit conducted by [Oak Security](https://www.oaksecurity.io/). 
