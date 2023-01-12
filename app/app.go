@@ -88,6 +88,7 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/strangelove-ventures/hero/app/upgrades/herculese"
 	"github.com/strangelove-ventures/hero/cmd"
 	tokenfactorymodule "github.com/strangelove-ventures/hero/x/tokenfactory"
 	tokenfactorymodulekeeper "github.com/strangelove-ventures/hero/x/tokenfactory/keeper"
@@ -606,6 +607,8 @@ func New(
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 
+	app.setupUpgradeHandlers()
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			tmos.Exit(err.Error())
@@ -770,6 +773,16 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper
+}
+
+func (app *App) setupUpgradeHandlers() {
+	// herculuese upgrade for testnet
+	app.UpgradeKeeper.SetUpgradeHandler(
+		herculese.UpgradeName,
+		herculese.CreateUpgradeHandler(
+			app.mm, app.configurator,
+		),
+	)
 }
 
 // SimulationManager implements the SimulationApp interface
